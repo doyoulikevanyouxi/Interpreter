@@ -21,28 +21,25 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="NonterminalExpression.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="TerminalExpression.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="XMLInterpreter.cpp">
       <Filter>XML</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLError.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AbstractExpression.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="NonterminalExpression.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="TerminalExpression.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="XMLInterpreter.h">
       <Filter>XML</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLError.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="AbstractError.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

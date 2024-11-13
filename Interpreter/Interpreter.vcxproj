@@ -128,14 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="NonterminalExpression.cpp" />
-    <ClCompile Include="TerminalExpression.cpp" />
+    <ClCompile Include="XMLError.cpp" />
     <ClCompile Include="XMLInterpreter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AbstractError.h" />
     <ClInclude Include="AbstractExpression.h" />
-    <ClInclude Include="NonterminalExpression.h" />
-    <ClInclude Include="TerminalExpression.h" />
+    <ClInclude Include="XMLError.h" />
     <ClInclude Include="XMLInterpreter.h" />
   </ItemGroup>
   <ItemGroup>

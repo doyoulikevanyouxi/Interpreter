@@ -4,40 +4,38 @@
 #include<map>
 #include "AbstractExpression.h"
 #include <vector>
+#include "XMLError.h"
 
 
 
-
-
-/// <summary>
-/// XML数据表达式，这是一个终结表达式
-/// </summary>
-class XMLDataExpression : public AbstractExpression {
+class XMLExpression : public XMLAbstractExpression {
 public:
-	XMLDataExpression() = default;
+	XMLExpression(XMLInterpreter& controler) :XMLAbstractExpression(controler) {}
+protected:
+	// 通过 XMLAbstractExpression 继承
+	void RaiseError(const AbstractError& error) override;
+
 };
 
 /// <summary>
 /// XML双引号解析，这是一个终结表达式
 /// </summary>
-class XMLQuotationMarksExpression : public AbstractExpression {
+class XMLQuotationMarksExpression : public XMLExpression {
 public:
-
-	XMLQuotationMarksExpression() = default;
+	XMLQuotationMarksExpression(XMLInterpreter& controler) :XMLExpression(controler) {}
+	~XMLQuotationMarksExpression() = default;
 	// 通过 AbstractExpression 继承
 	void interpret(const char*& str) override;
 	std::string str;
-	bool error = false;
 };
-
-
 
 /// <summary>
 /// XML属性中相等符号解析
 /// </summary>
-class XMLEqualsExpression : public AbstractExpression {
+class XMLEqualsExpression : public XMLExpression {
 public:
-	XMLEqualsExpression() = default;
+	XMLEqualsExpression(XMLInterpreter& controler) :XMLExpression(controler),qmarkExp(controler){}
+	~XMLEqualsExpression() = default;
 	// 通过 AbstractExpression 继承
 	void interpret(const char*& str) override;
 	std::string propertyName;
@@ -49,11 +47,11 @@ private:
 /// <summary>
 /// XML节点属性解析
 /// </summary>
-class XMLPropertyExpression : public AbstractExpression {
+class XMLPropertyExpression : public XMLExpression {
 public:
 
-	XMLPropertyExpression() = default;
-
+	XMLPropertyExpression(XMLInterpreter& controler) :XMLExpression(controler), equalExp(controler){}
+	~XMLPropertyExpression() = default;
 	// 通过 AbstractExpression 继承
 	void interpret(const char*& str) override;
 	std::string nodeName;
@@ -64,22 +62,21 @@ private:
 
 
 /// <summary>
-/// xml node节点解析
+/// XML解释器：控制解释流程，错误处理等
 /// </summary>
-class XMLNodeExpression : public AbstractExpression {
+class XMLInterpreter {
+
 public:
-
-	XMLNodeExpression() = default;
-	// 通过 AbstractExpression 继承
-	void interpret(const char*& str) override;
-	std::string str;
+	XMLInterpreter():pexp(*this){}
+	//处理错误
+	void OnXMLErrorOccured(const AbstractError& e);
+	void start(const char* data) {
+		const char* x = data;
+		pexp.interpret(x);
+	}
 private:
-	//XMLNodeStartAndEndExpression nodeExp;
-};
-
-class Content {
-
-
+	XMLPropertyExpression pexp;
+	
 };
 
 

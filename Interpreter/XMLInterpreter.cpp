@@ -8,78 +8,139 @@ void skipSpace(const char*& str) {
 	}
 }
 
-void XMLNodeExpression::interpret(const char*& str)
+
+void XMLExpression::RaiseError(const AbstractError& error)
 {
-	/*while (*str != '\0') {
-		if (*str == '<')
-			nodeExp.interpret(str);
-	}*/
+	if (xmlControler == nullptr)
+		return;
+	xmlControler->OnXMLErrorOccured(error);
 }
 
 
 void XMLPropertyExpression::interpret(const char*& str)
 {
-	bool matchStart = false;
+	if (*str != '<') {
+		std::string errorStr = "节点字符串必须以字符 < 作为起始";
+		XMLInvalidNode e(errorStr.c_str());
+		RaiseError(e);
+		return;
+	}
+	bool hasBeenClosed = false;
+	bool needNodeName = true;
 	while (*str != '\0') {
 		if (*str == '<') {
-			matchStart = true;
 			++str;
-			skipSpace(str);
+			continue;
 		}
 		if (*str == '>') {
-			matchStart = false;
+			hasBeenClosed = true;
 			break;
 		}
-		if (matchStart) {
-			if (*str != ' ') {
-				nodeName += *str;
+		if (*str == ' ') {
+			if (nodeName.empty())
+				needNodeName = true;
+			else
+				needNodeName = false;
+			skipSpace(str);
+			continue;
+		}
+		if (*str == '/') { 
+			if (*(str + 1) == ' ') {
 				++str;
-				continue;
-			}
-			else {
-				if (nodeName.empty()) {
-					std::cout << "节点必须要有一个名称" << std::endl;
+				skipSpace(str);
+				if (*str != '>') {
+					XMLInvalidString e("无效的字符 /");
+					RaiseError(e);
 					return;
 				}
-				else {
-					skipSpace(str);
-					equalExp.interpret(str);
-					++str;
-				}
 			}
+			else if (*(str + 1) != '>') {
+				XMLInvalidString e("无效的字符 /");
+				RaiseError(e);
+				return;
+			}
+			else {
+				hasBeenClosed = true;
+				break;
+			}
+		
+		}
+		else {
+			if (needNodeName) {
+				nodeName += *str;
+			}
+			else {
+				equalExp.interpret(str);
+			}
+			++str;
 		}
 	}
-	std::cout << nodeName ;
+	if (!hasBeenClosed) {
+		std::string errorStr = "未找点终结字符 >";
+		XMLInvalidNode e(errorStr.c_str());
+		RaiseError(e);
+		return;
+	}
+	std::cout <<"name:" << nodeName;
 }
+
 
 void XMLEqualsExpression::interpret(const char*& str)
 {
+	if (*str == ' ') {
+		std::string errorStr = "属性表达式应该以非空或特殊字符作为起始";
+		XMLInvalidString e(errorStr.c_str());
+		RaiseError(e);
+		return;
+	}
+
 	propertyName.clear();
 	const char* preSpace = str;
 	bool hasEquals = false;
 	while (*str != '\0') {
 		if (*str == '=') {
+			if (this->propertyName.empty()) {
+				std::string errorStr = "未指定属性名称";
+				XMLInvalidString e(errorStr.c_str());
+				return;
+			}
 			hasEquals = true;
 			++str;
 			skipSpace(str);
 			qmarkExp.interpret(str);
 			break;
 		}
+		if (*str == ' ') {
+			skipSpace(str);
+			if (*str != '=') {
+				std::string errorStr = "未找到符号 =";
+				XMLInvalidString e(errorStr.c_str());
+				RaiseError(e);
+				return;
+			}
+			continue;
+		}
 		this->propertyName += *str;
 		++str;
 	}
 	if (!hasEquals) {
-		std::cout << "无效的属性表达式" << std::endl;
+		std::string errorStr = this->propertyName + ":不是一个有效的属性表达式";
+		XMLInvalidString e(errorStr.c_str());
+		RaiseError(e);
+		return;
+		//std::cout << "无效的属性表达式" << std::endl;
 	}
-	std::cout << propertyName << " : " << qmarkExp.str << std::endl;;
+	//std::cout << propertyName << " : " << qmarkExp.str << std::endl;;
 }
 
 void XMLQuotationMarksExpression::interpret(const char*& str)
 {
 	this->str.clear();
+	//字符串必须以 " 为起始字符，就算前边是空字符+"也不行
 	if (*str != '"') {
-		error = true;
-		std::cout << "属性值需要双引号作为开头，而不是[" << *str << "]" << std::endl;
+		std::string erorrStr = "属性值必须以\"为起始字符，而不是" + *str;
+		XMLInvalidString e(erorrStr.c_str());
+		RaiseError(e);
 		return;
 	}
 
@@ -104,6 +165,17 @@ void XMLQuotationMarksExpression::interpret(const char*& str)
 				hasBeenClosed = true;
 				break;
 			}
+			if (*str == '<') {
+				XMLUnexpectedTerminalSymbol e('<');
+				RaiseError(e);
+				return;
+			}
+			if (*str == '>') {
+				XMLUnexpectedTerminalSymbol e('>');
+				RaiseError(e);
+				return;
+			}
+			//当上一个字符是空白字符时
 			if(preCharIsSpace){
 				preCharIsSpace = false;
 				//字符集头部的空白字符将被忽略
@@ -124,8 +196,16 @@ void XMLQuotationMarksExpression::interpret(const char*& str)
 		}
 	}
 	if (!hasBeenClosed) {
-		std::cout << "没有配对的双引号" << std::endl;
-		error = true;
+		std::string error = "未找到属性值的终结字符\"";
+		XMLInvalidString e(error.c_str());
+		RaiseError(e);
 		return;
 	}
+	std::cout << this->str << std::endl;
 }
+
+void XMLInterpreter::OnXMLErrorOccured(const AbstractError& e)
+{
+	e.ErrorMessage();
+}
+
