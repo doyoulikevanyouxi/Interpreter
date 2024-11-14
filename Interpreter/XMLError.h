@@ -49,3 +49,15 @@ public:
 private:
 	std::string str;
 };
+
+/// <summary>
+/// 非法字符
+/// </summary>
+class XMLInvalidSymbol : public AbstractError {
+public:
+	XMLInvalidSymbol(const char str);
+	// 通过 AbstractError 继承
+	void ErrorMessage() const override;
+private:
+	char ch;
+};

@@ -1,13 +1,21 @@
 
 #include"XMLInterpreter.h"
 #include<iostream>
-
+#include<fstream>
 int main() {
-	
-	const char* data = R"(<xnode w1="int20" w2="20"  w3="string" x/>)";
 	XMLInterpreter p;
-	p.start(data);
-	
-
+	std::string fileName = "test.txt";
+	std::ifstream file(fileName);
+	if (!file.is_open()) {
+		std::cout << "无法打开文件 " << fileName << std::endl;
+		return 0;
+	}
+	std::string str;
+	std::string st;
+	while (std::getline(file, str)) {
+		st += str;
+	}
+	p.start(st.c_str());
+	file.close();
 	return 0;
 }

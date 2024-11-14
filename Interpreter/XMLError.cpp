@@ -36,3 +36,12 @@ void XMLInvalidNode::ErrorMessage() const
 {
 	std::cout <<"无效的节点:" << str <<std::endl;
 }
+
+XMLInvalidSymbol::XMLInvalidSymbol(const char str):ch(str)
+{
+}
+
+void XMLInvalidSymbol::ErrorMessage() const
+{
+	std::cout << "非法字符:" << ch << std::endl;
+}
