@@ -133,7 +133,7 @@ void XMLEqualsExpression::interpret(const char*& str)
 		return;
 	}
 	propertyName.clear();
-	
+
 	const char* preSpace = str;
 	bool hasEquals = false;
 	bool hasName = false;
@@ -296,4 +296,117 @@ void XMLInterpreter::start(const char* data)
 	}
 }
 
+void XMLEexpectIntergret::interpret(const char* str)
+{
+	while (*str != '\0') {
+		if (!expect.empty()) {
+			//是栈顶期望的字符
+			if (expect.top().Matched(*str)) {
+				expect.pop();
+				auto e = charExpect(*str, true);
+				if (!e.invalid)
+					expect.push(e);
+				++str;
+				continue;
+			}
+			//非期望，非允许的字符
+			else if (!allowedChar.Allowed(*str)) {
+				std::cout << "意外的字符：" << *str << std::endl;
+				return;
+			}
+		}
+		//设置下一个字符的期望值和允许值
+		auto e = charExpect(*str);
+		if (!e.invalid)
+			expect.push(e);
+		++str;
+	}
+	if (!expect.empty()) {
+		std::cout << "字符串不完整" << std::endl;
+	}
+}
 
+ExpectedChars XMLEexpectIntergret::charExpect(const char& chr, bool isExpected)
+{
+	ExpectedChars e;
+	switch (chr)
+	{
+	case '<':
+		e.expected.push_back('>');
+		allowedChar.allowedRange = AllowedChars::Range::defualt;
+		e.invalid = false;
+		break;
+	case '=':
+		allowedChar.allowedChar.push_back(' ');
+		allowedChar.allowedChar.push_back('	');
+		allowedChar.allowedChar.push_back('\n');
+		allowedChar.allowedChar.push_back('"');
+		allowedChar.allowedRange = AllowedChars::Range::specifyChar;
+		e.invalid = true;
+		break;
+	case '"':
+		//双引号期望值分情况，由于前双引号期望后双引号，而后双引号并不期望前双引号
+		if (isExpected) {
+			allowedChar.allowedChar.push_back(' ');
+			allowedChar.allowedChar.push_back('	');
+			allowedChar.allowedChar.push_back('\n');
+			allowedChar.allowedChar.push_back('/');
+			allowedChar.allowedRange = AllowedChars::Range::specifyChar;
+			e.invalid = true;
+		}
+		else {
+			e.expected.push_back('"');
+			allowedChar.allowedRange = AllowedChars::Range::defualt;
+			e.invalid = false;
+		}
+		break;
+	case '/':
+		allowedChar.allowedChar.push_back(' ');
+		allowedChar.allowedChar.push_back('	');
+		allowedChar.allowedChar.push_back('\n');
+		allowedChar.allowedChar.push_back('>');
+		allowedChar.allowedRange = AllowedChars::Range::specifyChar;
+		e.invalid = true;
+
+		break;
+	default:
+		e.invalid = true;
+		break;
+	}
+	return e;
+}
+
+bool ExpectedChars::Matched(const char& ch)
+{
+	bool matched = false;
+	if (!expected.empty()) {
+		for (auto& chr : expected) {
+			if (chr == ch) {
+				matched = true;
+			}
+		}
+	}
+	return matched;
+}
+
+bool AllowedChars::Allowed(const char& ch)
+{
+	if (allowedRange == Range::defualt)
+		return true;
+	if (allowedRange & Range::specifyChar) {
+		for (auto& chr : allowedChar) {
+			if (chr == ch)
+				return true;
+		}
+	}
+	if (allowedRange & Range::character) {
+		if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
+			return true;
+	}
+	if (allowedRange & Range::number) {
+		if (ch >= '0' && ch <= '9')
+			return true;
+	}
+
+	return false;
+}
