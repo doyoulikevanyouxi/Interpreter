@@ -13,12 +13,17 @@ void skipSpace(const char*& str) {
 	}
 }
 
+bool IsNum(const char& chr) {
+	if (chr >= '0' && chr < '9')
+		return true;
+	return false;
+}
 
-
-//辅助函数：用于验证字符的合法性
-//bool vertifiedCharValidation(const char chr) {
-//	if()
-//}
+bool IsLetter(const char& chr) {
+	if ((chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z'))
+		return true;
+	return false;
+}
 
 void XMLExpression::RaiseError(const AbstractError& error)
 {
@@ -29,182 +34,218 @@ void XMLExpression::RaiseError(const AbstractError& error)
 
 void XMLPropertyExpression::interpret(const char*& str)
 {
+	errorOcurred = false;
+	matchStart = false;
+	hasBeenClosed = false;
+	if (SpaceChar(*str)) {
+		skipSpace(str);
+	}
 	if (*str != '<') {
-		std::string errorStr = "节点字符串必须以字符 < 作为起始";
-		XMLInvalidNode e(errorStr.c_str());
+		XMLInvalidNode e;
 		RaiseError(e);
 		return;
 	}
-	nodeName.clear();
-
-	bool hasBeenClosed = false;
-	bool needNodeName = true;
-	bool isClosedNode = false;
+	
 	Node node;
+	bool toSaveNodeName = true;
 	while (*str != '\0') {
-		if (*str == '<') {
+		if (hasBeenClosed)
+			break;
+		if (SpaceChar(*str)) {
+			if (toSaveNodeName && !node.NodeName.empty())
+				toSaveNodeName = false;
+			skipSpace(str);
+		}
+		if (!IsLetter(*str) && !IsNum(*str)) {
+			HandledSpecialChar(str);
+			if (errorOcurred)
+				break;
+			continue;
+		}
+		if (toSaveNodeName) {
+			node.NodeName += *str;
+			++str;
+			continue;
+		}
+		equalExp.SetNode(node);
+		equalExp.interpret(str);
+	}
+	if (errorOcurred) {
+		XMLInvalidNode e;
+		RaiseError(e);
+		return;
+	}
+	xmlControler->AddNode(node);
+}
+
+void XMLPropertyExpression::HandledSpecialChar(const char*& str)
+{
+		switch (*str)
+		{
+			//节点解析开始
+		case '<':
+			if (matchStart) {
+				std::cout << "非法字符 <" << std::endl;
+				errorOcurred = true;
+				return;
+			}
+			++str;
+			CheckNodeType(str);
+			matchStart = true;
+			return;
+			//节点解析结束
+		case '>':
+			if (!matchStart) {
+				std::cout << "非法字符 >" << std::endl;
+				errorOcurred = true;
+				return;
+			}
+			++str;
+			hasBeenClosed = true;
+			matchStart = false;
+			return;
+			//节点解析预结束
+		case '?':
+		case '!':
+		case '/':
+			//进行合法性验证
 			++str;
 			if (SpaceChar(*str)) {
 				skipSpace(str);
 			}
-			if (*str == '/') {
-				isClosedNode = true;
-				++str;
-			}
-			continue;
-		}
-		if (*str == '>') {
-			hasBeenClosed = true;
-			++str;
-			break;
-		}
-		if (SpaceChar(*str)) {
-			if (nodeName.empty())
-				needNodeName = true;
-			else
-				needNodeName = false;
-			skipSpace(str);
-			continue;
-		}
-		if (*str == '=') {
-			XMLInvalidString e("无效的字符 =");
-			RaiseError(e);
-			errorOcurred = true;
-			return;
-		}
-		if (*str == '"') {
-			XMLInvalidString e("无效的字符 \"");
-			RaiseError(e);
-			errorOcurred = true;
-			return;
-		}
-		if (*str == '/') {
-			++str;
-			if (!SpaceChar(*str) && *str != '>') {
-				XMLInvalidString e("无效的字符 /");
-				RaiseError(e);
-				errorOcurred = true;
-				return;
-			}
-			if (*str == '>') {
-				hasBeenClosed = true;
-				break;
-			}
-			skipSpace(str);
 			if (*str != '>') {
-				XMLInvalidString e("无效的字符 /");
-				RaiseError(e);
 				errorOcurred = true;
+				std::cout << "非法字符/" << std::endl;
 				return;
 			}
-			hasBeenClosed = true;
+			//这是一个自闭节点
+			break;
+		default:
+			errorOcurred = true;
 			break;
 		}
-		if (needNodeName) {
-			nodeName += *str;
-			++str;
-		}
-		else {
-			equalExp.SetNode(node);
-			equalExp.interpret(str);
-		}
-
-	}
-	if (!hasBeenClosed) {
-		std::string errorStr = "未找点终结字符 >";
-		XMLInvalidNode e(errorStr.c_str());
-		RaiseError(e);
-		errorOcurred = true;
-		return;
-	}
-	if (isClosedNode)
-		return;
-	node.NodeName = nodeName;
-	xmlControler->AddNode(node);
 }
 
 
+void XMLPropertyExpression::CheckNodeType(const char*& str)
+{
+	if (SpaceChar(*str)) {
+		skipSpace(str);
+	}
+	switch (*str)
+	{
+		//系统类型节点
+	case '?':
+		++str;
+		break;
+		//关闭节点
+	case '/':
+		++str;
+		break;
+		//注释节点
+	case '!':
+		if (*(str+1) != '-' && *(str+2)!='-') {
+			XMLError e("无效的数据类型");
+			RaiseError(e);
+			return;
+		}
+		str += 2;
+		break;
+	//无效数据
+	case '\0':
+	{
+		XMLError e("不完整的数据");
+		RaiseError(e);
+	}
+	break;
+	//普通节点
+	default:
+		break;
+	}
+}
+
 void XMLEqualsExpression::interpret(const char*& str)
 {
-	if (*str == ' ') {
-		std::string errorStr = "属性表达式应该以非空或特殊字符作为起始";
-		XMLInvalidString e(errorStr.c_str());
-		RaiseError(e);
-		return;
+	errorOcurred = false;
+	if (SpaceChar(*str)) {
+		skipSpace(str);
 	}
-	propertyName.clear();
 
-	const char* preSpace = str;
+	std::string propertyName;
+	const char* startAddres = str;
 	bool hasEquals = false;
 	bool hasName = false;
 	bool hasValue = false;
 	bool invalide = false;
 	while (*str != '\0') {
-		//在未进行属性值解析时，可能存在非法字符
-		if (*str == '/') {
-			/*XMLInvalidSymbol e('/');
-			RaiseError(e);*/
-			errorOcurred = true;
-			break;
-		}
 		// 字符 = 是表达式合法的证明之一
 		if (*str == '=') {
-			if (this->propertyName.empty()) {
+			if (propertyName.empty()) {
 				break;
 			}
 			hasName = true;
 			hasEquals = true;
 			++str;
-			continue;
-		}
-		if (*str == '"') {
-			//存在双引号时，需要判断是否已经存在=
-			if (!hasEquals) {
-				break;
-			}
 			qmarkExp.interpret(str);
-			if (!qmarkExp.errorOcurred)
+			if (!qmarkExp.errorOcurred) {
 				hasValue = true;
+			}
 			break;
 		}
+		//非法字符
+		if (!VertifyCharValidation(*str)) {
+			XMLUnexpectedSymbol e(startAddres, str + 1);
+			RaiseError(e);
+			errorOcurred = true;
+			break;
+		}
+		//空白字符处理
 		if (SpaceChar(*str)) {
-			//空白字符在表达式有以下合法位置    A空白字符=空白字符"B"
+			//空白字符在表达式有以下合法位置    A空白字符=
 			skipSpace(str);
-			//所以需要检查空白字符后接字符
-			//该处检查并没有使用拷贝字符串指针，是因为，如果是合法的表达式，那么空白字符位置本身就需要被跳过
-			//如果是非法表达式,也就是该字符串不是一个有效的属性，那么跳到下一个非空字符或者空字符都可以，外层调用会屏蔽掉这个差异
-			if (*str != '=' && *str != '"') {
+			if (*str != '=' ) {
+
 				break;
 			}
 			continue;
 		}
-		this->propertyName += *str;
+		propertyName += *str;
 		++str;
 	}
 	if (!hasEquals || !hasName || !hasValue) {
-		std::string errorStr = this->propertyName + ":不是一个有效的属性表达式";
-		XMLInvalidString e(errorStr.c_str());
+
+		XMLInvalidString e(startAddres,str);
 		RaiseError(e);
 		errorOcurred = true;
 		return;
 	}
 	if (node != nullptr) {
-		node->propertys.insert(std::make_pair(this->propertyName, qmarkExp.str));
+		node->propertys.insert(std::make_pair(propertyName, qmarkExp.str));
 	}
+}
+
+inline bool XMLEqualsExpression::VertifyCharValidation(const char& chr)
+{
+	return  IsLetter(chr) || IsNum(chr) || chr == '-' || chr ==':';
 }
 
 void XMLQuotationMarksExpression::interpret(const char*& str)
 {
+	errorOcurred = false;
 	this->str.clear();
+	if (SpaceChar(*str)) {
+		skipSpace(str);
+	}
+	
 	//字符串必须以 " 为起始字符，就算前边是空字符+"也不行
 	if (*str != '"') {
-		std::string erorrStr = "属性值必须以\"为起始字符，而不是" + *str;
-		XMLInvalidString e(erorrStr.c_str());
+		std::string erorrStr = "属性值必须以 \" 为起始字符，而不是" + *str;
+		XMLError e(erorrStr.c_str());
 		RaiseError(e);
 		errorOcurred = true;
 		return;
 	}
-
+	const char* startAddres = str;
 	//空白字符存在三个地方  "空白字符string空白字符string空白字符"
 	//用来标记空白字符的区间
 	//空白字符并不是遍历后就直接存储的，下面操纵相当于将空白字符放在了一个缓冲区，当条件满足时将空白字符添加进数据集
@@ -227,18 +268,11 @@ void XMLQuotationMarksExpression::interpret(const char*& str)
 			++str;
 			break;
 		}
-		if (*str == '<') {
-			XMLUnexpectedTerminalSymbol e('<');
+		//非法字符
+		if (!VertifyCharValidation(*str)) {
+			XMLUnexpectedSymbol e(startAddres, str + 1);
 			RaiseError(e);
 			errorOcurred = true;
-
-			return;
-		}
-		if (*str == '>') {
-			XMLUnexpectedTerminalSymbol e('>');
-			RaiseError(e);
-			errorOcurred = true;
-
 			return;
 		}
 		//当上一个字符是空白字符时
@@ -261,13 +295,29 @@ void XMLQuotationMarksExpression::interpret(const char*& str)
 		beginSpace = str;
 	}
 	if (!hasBeenClosed) {
-		std::string error = "未找到属性值的终结字符\"";
-		XMLInvalidString e(error.c_str());
+		XMLUnexpectedTerminalSymbol e(startAddres, str, '"', false);
 		RaiseError(e);
 		errorOcurred = true;
-
 		return;
 	}
+}
+
+inline bool XMLQuotationMarksExpression::VertifyCharValidation(const char& chr)
+{
+	switch (chr)
+	{
+	case '>':
+	{
+		return false;
+	}
+	case '<':
+	{
+		return false;
+	}
+	default:
+		return true;
+	}
+
 }
 
 void XMLInterpreter::OnXMLErrorOccured(const AbstractError& e)
@@ -282,6 +332,8 @@ void XMLInterpreter::start(const char* data)
 	while (*x != '\0') {
 		if (*x == '<') {
 			pexp.interpret(x);
+			if (pexp.errorOcurred)
+				break;
 		}
 		else {
 			++x;

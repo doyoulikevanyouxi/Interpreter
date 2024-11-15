@@ -1,47 +1,51 @@
 #include "XMLError.h"
 #include<iostream>
-XMLInvalidString::XMLInvalidString(const char* str):str(str)
+
+XMLInvalidString::XMLInvalidString(const char* start, const char* end)
 {
+	message.assign(start, end);
 }
 
 void XMLInvalidString::ErrorMessage() const
 {
-	std::cout << "无效的字符串:" << str << std::endl;
+	std::cout << "无效的字符串 " << message << std::endl;
 }
 
-XMLUnexpectedTerminalSymbol::XMLUnexpectedTerminalSymbol(const char chr) : symbol(chr)
+XMLUnexpectedTerminalSymbol::XMLUnexpectedTerminalSymbol(const char* start, const char* end, const char chr, bool findOrNot):symbol(chr),find(findOrNot)
 {
+	message.assign(start, end);
 }
 
 void XMLUnexpectedTerminalSymbol::ErrorMessage() const
 {
-	std::cout << "意外的终结符:" << symbol << std::endl;
+	if(find)
+		std::cout << "表达式 " << message << " 出现意外的终结符 " <<symbol<< std::endl;
+	else
+		std::cout << "表达式 " << message << " 未找到匹配的终结符 "<<symbol << std::endl;
 }
 
-XMLUnkownString::XMLUnkownString(const char* str):str(str)
-{
-}
-
-void XMLUnkownString::ErrorMessage() const
-{
-	std::cout << "无法解析的字符串：" << str << std::endl;
-}
-
-
-XMLInvalidNode::XMLInvalidNode(const char* str) : str(str)
-{
-}
 
 void XMLInvalidNode::ErrorMessage() const
 {
-	std::cout <<"无效的节点:" << str <<std::endl;
+	std::cout <<"无效的节点"<<std::endl;
 }
 
-XMLInvalidSymbol::XMLInvalidSymbol(const char str):ch(str)
+
+XMLError::XMLError(const char* str):str(str)
 {
 }
 
-void XMLInvalidSymbol::ErrorMessage() const
+void XMLError::ErrorMessage() const
 {
-	std::cout << "非法字符:" << ch << std::endl;
+	std::cout<<str<< std::endl;
+}
+
+XMLUnexpectedSymbol::XMLUnexpectedSymbol(const char* start, const char* end, const char chr):symbol(chr)
+{
+	message.assign(start, end);
+}
+
+void XMLUnexpectedSymbol::ErrorMessage() const
+{
+	std::cout << "表达式 " << message << " 中包含不允许的字符 " << symbol << std::endl;
 }

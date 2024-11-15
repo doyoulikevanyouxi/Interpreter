@@ -2,18 +2,15 @@
 
 #pragma once
 #include "AbstractError.h"
-#include<string>
 /// <summary>
 /// 无效字符串
 /// </summary>
 class XMLInvalidString :public AbstractError
 {
 public:  
-	XMLInvalidString(const char* str);
+	XMLInvalidString(const char* start,const char* end);
 	// 通过 AbstractError 继承
 	void ErrorMessage() const override;
-private:
-	std::string str;
 };
 
 /// <summary>
@@ -21,43 +18,35 @@ private:
 /// </summary>
 class XMLUnexpectedTerminalSymbol : public AbstractError {
 public:
-	XMLUnexpectedTerminalSymbol(const char chr);
+	XMLUnexpectedTerminalSymbol(const char* start, const char* end,const char chr,bool findOrNot = true);
+	// 通过 AbstractError 继承
+	void ErrorMessage() const override;
+private:
+	char symbol;
+	bool find;
+};
+
+class XMLUnexpectedSymbol : public AbstractError {
+public:
+	XMLUnexpectedSymbol(const char* start, const char* end,const char chr ='\0');
 	// 通过 AbstractError 继承
 	void ErrorMessage() const override;
 private:
 	char symbol;
 };
 
-/// <summary>
-/// 未知的字符串
-/// </summary>
-class XMLUnkownString : public AbstractError {
-public:
-	XMLUnkownString(const char* str);
-
-	// 通过 AbstractError 继承
-	void ErrorMessage() const override;
-private:
-	std::string str;
-};
-
 class XMLInvalidNode : public AbstractError {
 public:
-	XMLInvalidNode(const char* str);
+	XMLInvalidNode() =default;
+	// 通过 AbstractError 继承
+	void ErrorMessage() const override;
+};
+
+class XMLError : public AbstractError {
+public:
+	XMLError(const char* str);
 	// 通过 AbstractError 继承
 	void ErrorMessage() const override;
 private:
 	std::string str;
-};
-
-/// <summary>
-/// 非法字符
-/// </summary>
-class XMLInvalidSymbol : public AbstractError {
-public:
-	XMLInvalidSymbol(const char str);
-	// 通过 AbstractError 继承
-	void ErrorMessage() const override;
-private:
-	char ch;
 };
